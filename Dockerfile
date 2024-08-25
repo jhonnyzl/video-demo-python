@@ -10,7 +10,7 @@ ENV PYTHONUNBUFFERED=1 \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
-# Instala herramientas necesarias para construir paquetes de Python
+# Instala herramientas necesarias para construir paquetes de Python y Node.js
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
     gcc \
@@ -18,7 +18,12 @@ RUN apt-get update \
     build-essential \
     software-properties-common \
     git \
-    python3-dev
+    python3-dev \
+    curl
+
+# Instala Node.js y npm
+RUN curl -fsSL https://deb.nodesource.com/setup_14.x | bash - \
+    && apt-get install -y nodejs
 
 # Establece el directorio de trabajo
 WORKDIR /app
@@ -26,6 +31,9 @@ WORKDIR /app
 # Copia el archivo de requisitos y lo instala
 COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
+
+# Instala Tailwind CSS
+RUN npm install -g tailwindcss
 
 # Copia el resto del código de la aplicación
 COPY . .
