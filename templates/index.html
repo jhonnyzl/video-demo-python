@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Videollamada</title>
+    <link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet">
+    <style>
+        .mute-button {
+            background-color: #ff4757;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .mute-button:hover {
+            background-color: #e84118;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 flex items-center justify-center h-screen">
+    <div class="bg-gray-800 p-4 rounded-lg shadow-lg w-full max-w-6xl flex flex-col space-y-4">
+        <h1 class="text-2xl font-bold text-white mb-4 text-center">Videollamada</h1>
+        <div class="flex flex-col space-y-4">
+            <video id="remoteVideo" class="w-full h-96 bg-black">
+                <source src="{{ url_for('static', filename='assets/video de prueba.mp4') }}" type="video/mp4">
+                Tu navegador no soporta la etiqueta de video.
+            </video>
+            <video id="localVideo" class="w-full h-96 bg-black" autoplay muted></video>
+            <button id="muteButton" class="mute-button">Mutear Micrófono</button>
+            <audio id="endCallSound" src="{{ url_for('static', filename='assets/end call sound.mp3') }}"></audio>
+        </div>
+    </div>
+    <script>
+        (function() {
+            const localVideo = document.getElementById('localVideo');
+            const remoteVideo = document.getElementById('remoteVideo');
+            const muteButton = document.getElementById('muteButton');
+            const endCallSound = document.getElementById('endCallSound');
+            let mediaRecorder;
+            let recordedChunks = [];
+            let audioTrack;
+
+            // Solicitar acceso a la cámara y al micrófono
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then(stream => {
+                    localVideo.srcObject = stream;
+                    audioTrack = stream.getAudioTracks()[0];
+
+                    // Configurar MediaRecorder para grabar la transmisión
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = function(event) {
+                        if (event.data.size > 0) {
+                            recordedChunks.push(event.data);
+                        }
+                    };
+                    mediaRecorder.onstop = function() {
+                        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                        const formData = new FormData();
+
+                        // Generar un nombre de archivo único usando la fecha y hora actual
+                        const timestamp = new Date().toISOString().replace(/[:.-]/g, '');
+                        const uniqueFilename = `grabacion_${timestamp}.webm`;
+
+                        formData.append('video', blob, uniqueFilename);
+
+                        fetch('/upload', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                console.log('File uploaded successfully:', data.url);
+                            } else {
+                                console.error('Error uploading file:', data.error);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error uploading file:', error);
+                        });
+                    };
+
+                    // Iniciar la grabación cuando el video remoto comience a reproducirse
+                    remoteVideo.onplay = function() {
+                        mediaRecorder.start();
+                    };
+
+                    // Detener la grabación cuando el video remoto termine
+                    remoteVideo.onended = function() {
+                        remoteVideo.style.display = 'none'; // Ocultar el video remoto
+                        endCallSound.play(); // Reproducir el sonido de finalización de llamada
+                        mediaRecorder.stop();
+                    };
+
+                    // Reproducir el video remoto
+                    remoteVideo.play();
+
+                    // Agregar funcionalidad de mute al botón
+                    muteButton.addEventListener('click', () => {
+                        if (audioTrack.enabled) {
+                            audioTrack.enabled = false;
+                            muteButton.textContent = 'Desmutear Micrófono';
+                        } else {
+                            audioTrack.enabled = true;
+                            muteButton.textContent = 'Mutear Micrófono';
+                        }
+                    });
+                })
+                .catch(err => {
+                    console.error("Error accessing the camera and microphone: ", err);
+                });
+        })();
+    </script>
+</body>
+</html>
