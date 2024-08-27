@@ -26,7 +26,7 @@
         <h1 class="text-2xl font-bold text-white mb-4 text-center">Videollamada</h1>
         <div class="flex flex-col space-y-4">
             <video id="remoteVideo" class="w-full h-96 bg-black">
-                <source src="{{ url_for('static', filename='assets/video de prueba.mp4') }}" type="video/mp4">
+                <source src="{{ video_url }}" type="video/mp4">
                 Tu navegador no soporta la etiqueta de video.
             </video>
             <video id="localVideo" class="w-full h-96 bg-black" autoplay muted></video>

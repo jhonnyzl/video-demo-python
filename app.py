@@ -14,9 +14,24 @@ BUNNY_API_KEY_READ_ONLY = os.getenv('BUNNY_API_KEY_READ_ONLY')
 BUNNY_STORAGE_URL = f'https://storage.bunnycdn.com/{BUNNY_STORAGE_ZONE}'
 BUNNY_STORAGE_URL_LIST = f'https://storage.bunnycdn.com/{BUNNY_STORAGE_ZONE}/'
 
+def get_video_url():
+    url = "https://tavusapi.com/v2/videos/8cf685e69a"
+    headers = {"x-api-key": "72586941fb084592bb1d13c0cf884815"}
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        data = response.json()
+        return data.get('download_url')  # Ajusta esto según la estructura de la respuesta JSON
+    else:
+        print(f"Error: {response.status_code}")
+        return None
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    video_url = get_video_url()
+    if video_url is None:
+        return "Error: No se pudo obtener la URL del video", 500
+    return render_template('index.html', video_url=video_url)
 
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -40,7 +55,7 @@ def upload():
     except Exception as e:
         print(f"Error uploading file: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-    
+
 @app.route('/videos', methods=['GET'])
 def get_videos():
     try:
